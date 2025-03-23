@@ -1,5 +1,4 @@
- 
- ​﻿﻿​let​ ​craftTable​ ​=​ ​{ 
+﻿​window​.recipes ​=​ ​{ 
  ​  ​//武器 
  ​  ​'奶奶的拐杖'​: ​{ 
  ​    ​machine​: ​'高级工作台'​, 
