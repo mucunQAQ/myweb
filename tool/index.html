@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合成材料计算器</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .container { background: #f8f9fa; padding: 20px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .result { margin-top: 20px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>合成材料计算器</h1>
+
+        <!-- 计算输入区域 -->
+        <div class="form-group">
+            <label>物品名称：</label>
+            <input type="text" id="itemInput" placeholder="例如：漏斗">
+            <label>数量：</label>
+            <input type="number" id="quantityInput" value="1">
+            <button onclick="calculateMaterials()">开始计算</button>
+        </div>
+
+        <!-- 结果展示区域 -->
+        <div class="result" id="resultArea">
+            结果将显示在这里...
+        </div>
+    </div>
+
+    <!-- 引入配方文件（需创建recipes.js） -->
+    <script src="recipes.js"></script>
+    <script>
+        function calculateMaterials() {
+            const targetItem = document.getElementById('itemInput').value.trim();
+            const quantity = parseInt(document.getElementById('quantityInput').value);
+
+            if (!targetItem || isNaN(quantity) || quantity < 1) {
+                alert('请输入有效的物品名称和数量！');
+                return;
+            }
+
+            // 递归计算材料函数
+            function calculate(item, count) {
+                const result = {};
+                const recipe = window.recipes[item];
+                
+                if (!recipe) {
+                    result[item] = (result[item] || 0) + count;
+                    return result;
+                }
+
+                for (const [material, amount] of Object.entries(recipe)) {
+                    const subResult = calculate(material, amount * count);
+                    for (const [subItem, subCount] of Object.entries(subResult)) {
+                        result[subItem] = (result[subItem] || 0) + subCount;
+                    }
+                }
+
+                return result;
+            }
+
+            try {
+                const result = calculate(targetItem, quantity);
+                let output = `计算结果（${quantity}个${targetItem}）：\n`;
+                
+                // 整理结果（按层级分组）
+                const层级结果 = {};
+                for (const [item, count] of Object.entries(result)) {
+                    const层级 = window.recipes[item] ? 1 : 0; // 0级为基础材料，1级为合成材料
+                    层级结果[层级] = 层级结果[层级] || [];
+                    层级结果[层级].push(`${count}个${item}`);
+                }
+
+                // 生成输出
+                if (层级结果[1]) {
+                    output += "合成材料：\n  " + 层级结果[1].join("\n  ") + "\n";
+                }
+                if (层级结果[0]) {
+                    output += "基础材料：\n  " + 层级结果[0].join("\n  ") + "\n";
+                }
+
+                document.getElementById('resultArea').textContent = output;
+            } catch (error) {
+                alert(`计算错误：${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
