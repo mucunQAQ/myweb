@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合成材料计算器</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .container { background: #f8f9fa; padding: 20px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .result { margin-top: 20px; white-space: pre-wrap; }
+        .material-item { margin-left: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>合成材料计算器</h1>
+        
+        <!-- 配方设置区域 -->
+        <div class="form-group">
+            <h3>设置合成配方（JSON格式）：</h3>
+            <textarea id="recipesInput" rows="5">
+{
+  "漏斗": { "铁锭": 5, "箱子": 1 },
+  "箱子": { "木板": 8 },
+  "木板": {}
+}
+            </textarea>
+            <small>格式示例：{"物品A": {"材料B": 数量, "材料C": 数量}, ...}</small>
+        </div>
+
+        <!-- 计算输入区域 -->
+        <div class="form-group">
+            <label>物品名称：</label>
+            <input type="text" id="itemInput" placeholder="例如：漏斗">
+            <label>数量：</label>
+            <input type="number" id="quantityInput" value="1">
+            <button onclick="calculateMaterials()">开始计算</button>
+        </div>
+
+        <!-- 结果展示区域 -->
+        <div class="result" id="resultArea">
+            结果将显示在这里...
+        </div>
+    </div>
+
+    <script>
+        function calculateMaterials() {
+            // 获取配方数据
+            const recipes = JSON.parse(document.getElementById('recipesInput').value);
+            const targetItem = document.getElementById('itemInput').value.trim();
+            const quantity = parseInt(document.getElementById('quantityInput').value);
+
+            if (!targetItem || isNaN(quantity) || quantity < 1) {
+                alert('请输入有效的物品名称和数量！');
+                return;
+            }
+
+            // 递归计算材料函数
+            function calculate(item, count, depth = 0) {
+                const result = {};
+                const recipe = recipes[item];
+                
+                if (!recipe) {
+                    result[item] = (result[item] || 0) + count;
+                    return result;
+                }
+
+                for (const [material, amount] of Object.entries(recipe)) {
+                    const subResult = calculate(material, amount * count, depth + 1);
+                    for (const [subItem, subCount] of Object.entries(subResult)) {
+                        result[subItem] = (result[subItem] || 0) + subCount;
+                    }
+                }
+
+                // 显示直接材料（非递归部分）
+                if (depth === 0) {
+                    const directMaterials = {};
+                    for (const [material, amount] of Object.entries(recipe)) {
+                        directMaterials[material] = (directMaterials[material] || 0) + amount * count;
+                    }
+                    return { direct: directMaterials, ...result };
+                }
+
+                return result;
+            }
+
+            try {
+                const result = calculate(targetItem, quantity);
+                let output = `计算结果（${quantity}个${targetItem}）：\n`;
+                
+                // 显示直接材料
+                output += "直接材料：\n";
+                for (const [material, count] of Object.entries(result.direct)) {
+                    output += `  ${count}个${material}\n`;
+                }
+
+                // 显示所有递归材料
+                output += "\n完整材料清单：\n";
+                for (const [material, count] of Object.entries(result)) {
+                    if (material !== 'direct') { // 排除direct标记
+                        output += `  ${count}个${material}\n`;
+                    }
+                }
+
+                document.getElementById('resultArea').textContent = output;
+            } catch (error) {
+                alert(`计算错误：${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
