@@ -21,7 +21,7 @@
         <!-- 计算输入区域 -->
         <div class="form-group">
             <label>物品名称：</label>
-            <input type="text" id="itemInput" placeholder="例如：漏斗">
+            <input type="text" id="itemInput" placeholder="例如：奶奶的拐杖">
             <label>数量：</label>
             <input type="number" id="quantityInput" value="1">
             <button onclick="calculateMaterials()">开始计算</button>
@@ -55,10 +55,13 @@
                     return result;
                 }
 
-                for (const [material, amount] of Object.entries(recipe)) {
-                    const subResult = calculate(material, amount * count);
-                    for (const [subItem, subCount] of Object.entries(subResult)) {
-                        result[subItem] = (result[subItem] || 0) + subCount;
+                // 处理新配方格式（materialList数组）
+                if (Array.isArray(recipe.materialList)) {
+                    for (const [material, amount] of recipe.materialList) {
+                        const subResult = calculate(material, amount * count);
+                        for (const [subItem, subCount] of Object.entries(subResult)) {
+                            result[subItem] = (result[subItem] || 0) + subCount;
+                        }
                     }
                 }
 
@@ -69,20 +72,28 @@
                 const result = calculate(targetItem, quantity);
                 let output = `计算结果（${quantity}个${targetItem}）：\n`;
                 
-                // 整理结果（按层级分组）
-                const层级结果 = {};
+                // 整理结果（区分合成材料和基础材料）
+                const合成材料 = {};
+                const基础材料 = {};
+                
                 for (const [item, count] of Object.entries(result)) {
-                    const层级 = window.recipes[item] ? 1 : 0; // 0级为基础材料，1级为合成材料
-                    层级结果[层级] = 层级结果[层级] || [];
-                    层级结果[层级].push(`${count}个${item}`);
+                    const是合成材料 = window.recipes[item]?.materialList?.length > 0;
+                    (是合成材料 ? 合成材料 : 基础材料)[item] = count;
                 }
 
                 // 生成输出
-                if (层级结果[1]) {
-                    output += "合成材料：\n  " + 层级结果[1].join("\n  ") + "\n";
+                if (Object.keys(合成材料).length > 0) {
+                    output += "合成材料（需要工作台）：\n";
+                    for (const [item, count] of Object.entries(合成材料)) {
+                        const工作台 = window.recipes[item]?.machine || "工作台";
+                        output += `  ${count}个${item}（需要${工作台}）\n`;
+                    }
                 }
-                if (层级结果[0]) {
-                    output += "基础材料：\n  " + 层级结果[0].join("\n  ") + "\n";
+                if (Object.keys(基础材料).length > 0) {
+                    output += "\n基础材料（无需合成）：\n";
+                    for (const [item, count] of Object.entries(基础材料)) {
+                        output += `  ${count}个${item}\n`;
+                    }
                 }
 
                 document.getElementById('resultArea').textContent = output;
